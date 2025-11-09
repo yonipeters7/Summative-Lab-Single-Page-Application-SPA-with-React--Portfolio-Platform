@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import Header from './components/Header';
 import Hero from './components/Hero';
 import SearchBar from './components/SearchBar';
@@ -7,65 +7,85 @@ import AddProjectForm from './components/AddProjectForm';
 import { initialProjects } from './utils/initialProjects';
 
 function App() {
-  // State Management
+  // state for all the projects
   const [projects, setProjects] = useState(initialProjects);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [showAddForm, setShowAddForm] = useState(false);
 
-  // Get unique categories from projects
-  const categories = useMemo(() => {
-    const uniqueCategories = [...new Set(projects.map(p => p.category))];
-    return uniqueCategories.sort();
-  }, [projects]);
+  // get categories from projects array
+  function getCategories() {
+    let cats = [];
+    for (let i = 0; i < projects.length; i++) {
+      if (!cats.includes(projects[i].category)) {
+        cats.push(projects[i].category);
+      }
+    }
+    return cats.sort();
+  }
 
-  // Filter projects based on search term and category
-  const filteredProjects = useMemo(() => {
-    return projects.filter(project => {
-      const matchesSearch =
-        project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        project.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        project.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+  // filter the projects based on search and category
+  function filterProjects() {
+    let filtered = [];
 
-      const matchesCategory =
-        selectedCategory === 'All' || project.category === selectedCategory;
+    for (let i = 0; i < projects.length; i++) {
+      let project = projects[i];
+      let matchesSearch = false;
 
-      return matchesSearch && matchesCategory;
-    });
-  }, [projects, searchTerm, selectedCategory]);
+      // check if search term matches title or description
+      if (project.title.toLowerCase().includes(searchTerm.toLowerCase())) {
+        matchesSearch = true;
+      }
+      if (project.description.toLowerCase().includes(searchTerm.toLowerCase())) {
+        matchesSearch = true;
+      }
 
-  // Sort projects by date (newest first)
-  const sortedProjects = useMemo(() => {
-    return [...filteredProjects].sort((a, b) => new Date(b.date) - new Date(a.date));
-  }, [filteredProjects]);
+      // also check tags
+      for (let j = 0; j < project.tags.length; j++) {
+        if (project.tags[j].toLowerCase().includes(searchTerm.toLowerCase())) {
+          matchesSearch = true;
+        }
+      }
 
-  // Handler to add a new project
-  const handleAddProject = (newProject) => {
-    setProjects(prev => [newProject, ...prev]);
+      // if no search term, show all
+      if (searchTerm === '') {
+        matchesSearch = true;
+      }
+
+      // check category filter
+      let matchesCategory = selectedCategory === 'All' || project.category === selectedCategory;
+
+      if (matchesSearch && matchesCategory) {
+        filtered.push(project);
+      }
+    }
+
+    return filtered;
+  }
+
+  // add new project to the list
+  function handleAddProject(newProject) {
+    setProjects([newProject, ...projects]);
     setShowAddForm(false);
+  }
 
-    // Show a success message (you could add a toast notification here)
-    console.log('Project added successfully:', newProject);
-  };
+  const categories = getCategories();
+  const filteredProjects = filterProjects();
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div>
       <Header />
 
       <Hero onAddProjectClick={() => setShowAddForm(true)} />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Add Project Form (conditionally rendered) */}
+      <main>
         {showAddForm && (
-          <div className="mb-8">
-            <AddProjectForm
-              onAddProject={handleAddProject}
-              onClose={() => setShowAddForm(false)}
-            />
-          </div>
+          <AddProjectForm
+            onAddProject={handleAddProject}
+            onClose={() => setShowAddForm(false)}
+          />
         )}
 
-        {/* Search and Filter Bar */}
         <SearchBar
           searchTerm={searchTerm}
           onSearchChange={setSearchTerm}
@@ -74,18 +94,11 @@ function App() {
           onCategoryChange={setSelectedCategory}
         />
 
-        {/* Project List */}
-        <ProjectList projects={sortedProjects} />
+        <ProjectList projects={filteredProjects} />
       </main>
 
-      {/* Footer */}
-      <footer className="bg-white border-t border-gray-200 mt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center text-gray-600">
-            <p className="mb-2">Creative Agency Portfolio Platform</p>
-            <p className="text-sm">Built with React, Vite, and Tailwind CSS</p>
-          </div>
-        </div>
+      <footer style={{backgroundColor: 'white', padding: '20px', textAlign: 'center', marginTop: '40px'}}>
+        <p>Portfolio Platform - Built with React</p>
       </footer>
     </div>
   );
